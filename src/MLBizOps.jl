@@ -1,5 +1,18 @@
 module MLBizOps
 
+using DataFrames
+using DataFrameMacros
+
+using Soss
+using MeasureTheory
+using Chain
+
+using UUIDs
+
+export generate_data
+export gather_historical_data
+export ml_biz_ops_sim
+
 # Write your package code here.
 """Check whether dgp_params dataframe is properly specified with n_datapoints column for i.i.d. sampling from data generating process"""
 function validate_dgp_params(dgp_params)
@@ -48,6 +61,12 @@ function gather_historical_data(dgp_spec::Soss.Model, dgp_params::DataFrame)
 	return data
 end
 
+function collect_unlabeled_data(dgp_spec, epoch_params)
+	data = generate_data(dgp_spec, epoch_params)
+	
+	data = @chain data @transform(:observed = false, :predicted_labels = nothing)
+end
+
 function ml_biz_ops_sim(dgp_spec::Soss.Model, dgp_params::DataFrame, train_model::Function, summarize_model::Function, choose_and_label_data::Function)
 	
 	sim_data = DataFrame()
@@ -71,7 +90,7 @@ function ml_biz_ops_sim(dgp_spec::Soss.Model, dgp_params::DataFrame, train_model
 
 		# Train model on existing data
 		m = @chain sim_data train_model(_, epoch_params)
-		append!(model_summary, summarize_model(m, nrow(sim_data), epoch_params.epoch), promote=true)
+		append!(model_summary, summarize_model(m, sim_data, epoch_params.epoch), promote=true)
 		
 		# Collect new data points (outcome unobserved)
 		new_data = @chain epoch_params collect_unlabeled_data(dgp_spec, _)
