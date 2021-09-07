@@ -1,0 +1,13 @@
+name = "MLBizOps"
+uuid = "4cc8113b-92e1-44eb-9dd6-a1e250a7ca3b"
+authors = ["Jeremiah Lewis <4462211+jlewis91@users.noreply.github.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1.6"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
