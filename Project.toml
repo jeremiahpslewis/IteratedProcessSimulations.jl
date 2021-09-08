@@ -12,6 +12,7 @@ Soss = "8ce77f84-9b61-11e8-39ff-d17a774bf41c"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
+DataFrameMacros = "0.1"
 DataFrames = "1"
 julia = "1.6"
 
