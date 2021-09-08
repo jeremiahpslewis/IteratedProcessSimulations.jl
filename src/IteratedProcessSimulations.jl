@@ -46,17 +46,25 @@ function validate_simulation_description(simulation_description::DataFrame)
 	length(simulation_description.epoch) == length(unique(simulation_description.epoch)) || throw(ArgumentError(":epoch may not have duplicate values in simulation_description"))
 end
 
-# TODO: validate that model takes data frame and dataframe row as inputs and is type 'function'
-function validate_train_model_function(train_model_function)
+function validate_fit_model(fit_model::Function) end
+function validate_summarize_model(summarize_model::Function) end
+function validate_choose_observations(choose_observations::Function) end
 
-end
 
+"""
+	validate_inputs(ips::IteratedProcessSimulation)
+
+Validate IteratedProcessSimulation object.
+"""
 function validate_inputs(ips::IteratedProcessSimulation)
     validate_simulation_description(ips.simulation_description)
+	validate_fit_model(ips.fit_model)
+	validate_summarize_model(ips.summarize_model)
+	validate_choose_observations(ips.choose_observations)
 end
 
 """
-	generate_data(data_generating_process, epoch_parameters)
+	generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrameRow)
 
 Generate data from a data_generating_process for a single epoch.
 
@@ -65,23 +73,19 @@ function generate_data(data_generating_process::Soss.Model, epoch_parameters::Da
 	n_datapoints = epoch_parameters.n_datapoints
 
 	# Generate one cycle of data
-	# TODO: Using 'burn in here', look into and drop this if unnecessary...
 	df = @chain epoch_parameters begin
-		data_generating_process() # Apply epoch_parameters to the data_generating_process
-		rand(n_datapoints * 5)
-		DataFrame()
-		last(n_datapoints)
+		data_generating_process() # Apply data_generating_process function to epoch_parameters
+		rand(n_datapoints) # Sample from data_generating_process
+		DataFrame() # Return a DataFrame
 	end
 
-	# Add data generating process parameters for tracking
-	df = crossjoin(df, DataFrame(epoch_parameters)[!, [:epoch]])
-	df = @chain df @transform(:observed = false, :predicted_labels = nothing)
+	df = @chain df @transform(:epoch = epoch_parameters.epoch, :observed = false, :predicted_labels = nothing)
 	
 	return df
 end
 
 """
-	run_simulation(ips)
+	run_simulation(ips::IteratedProcessSimulation)
 
 Run a single iterated process simulation.
 """
@@ -131,7 +135,7 @@ function run_simulation(ips::IteratedProcessSimulation)
 end
 
 """
-	run_simulation
+	run_simulation(ips::IteratedProcessSimulation, n_simulations::Int)
 
 Run an iterated process simulation `n_simulations` times.
 """
