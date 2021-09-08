@@ -50,9 +50,9 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using MLBizOps
-            DocMeta.setdocmeta!(MLBizOps, :DocTestSetup, :(using MLBizOps); recursive=true)
-            doctest(MLBizOps)'
+            using IteratedProcessSimulations
+            DocMeta.setdocmeta!(IteratedProcessSimulations, :DocTestSetup, :(using IteratedProcessSimulations); recursive=true)
+            doctest(IteratedProcessSimulations)'
       - run: julia --project=docs docs/make.jl
         env:
           JULIA_PKG_SERVER: ""

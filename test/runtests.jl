@@ -1,4 +1,4 @@
-using MLBizOps
+using IteratedProcessSimulations
 using Test
 using DataFrames
 using DataFrameMacros
@@ -10,7 +10,7 @@ using Chain
 import Distributions: Binomial
 import GLM: glm, LogitLink, fit, coef, predict, @formula
 
-@testset "MLBizOps.jl" begin
+@testset "IteratedProcessSimulations.jl" begin
 	@testset "ml_biz_ops_sim" begin
 
 
@@ -83,7 +83,7 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 		@test ncol(test_data) == 5
 
 		hist_params = @chain test_dgp_params @subset(:epoch == 0)
-		test_data = MLBizOps.gather_historical_data(test_dgp, hist_params)
+		test_data = IteratedProcessSimulations.gather_historical_data(test_dgp, hist_params)
 		@test nrow(test_data) == 20
 		@test ncol(test_data) == 7
 

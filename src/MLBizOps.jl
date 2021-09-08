@@ -1,17 +1,22 @@
-module MLBizOps
+module IteratedProcessSimulations
 
 using DataFrames
 using DataFrameMacros
 
 using Soss
-using MeasureTheory
 using Chain
 
 using UUIDs
 
-export generate_data
-export gather_historical_data
-export ml_biz_ops_sim
+export IteratedProcessSimulation
+export validate_inputs
+export run_simulation
+
+
+struct IteratedProcessSimulation
+	data_generating_process::Soss.Model
+	simulation_description::DataFrame
+end
 
 # Write your package code here.
 """Check whether simulation_description dataframe is properly specified with n_datapoints column for i.i.d. sampling from data generating process"""
@@ -32,12 +37,6 @@ function validate_inputs(ips::IteratedProcessSimulation)
     validate_simulation_description(ips.simulation_description)
     validate_train_model_function(train_model)
 end
-
-struct IteratedProcessSimulation
-	data_generating_process::Soss.Model
-	simulation_description::DataFrame
-end
-
 
 function run_simulation(ips::IteratedProcessSimulation)
 	

@@ -1,16 +1,16 @@
-using MLBizOps
+using IteratedProcessSimulations
 using Documenter
 
-DocMeta.setdocmeta!(MLBizOps, :DocTestSetup, :(using MLBizOps); recursive=true)
+DocMeta.setdocmeta!(IteratedProcessSimulations, :DocTestSetup, :(using IteratedProcessSimulations); recursive=true)
 
 makedocs(;
-    modules=[MLBizOps],
+    modules=[IteratedProcessSimulations],
     authors="Jeremiah Lewis <4462211+jlewis91@users.noreply.github.com> and contributors",
-    repo="https://github.com/jeremiahpslewis/MLBizOps.jl/blob/{commit}{path}#{line}",
-    sitename="MLBizOps.jl",
+    repo="https://github.com/jeremiahpslewis/IteratedProcessSimulations.jl/blob/{commit}{path}#{line}",
+    sitename="IteratedProcessSimulations.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://jeremiahpslewis.github.io/MLBizOps.jl",
+        canonical="https://jeremiahpslewis.github.io/IteratedProcessSimulations.jl",
         assets=String[],
     ),
     pages=[
@@ -19,6 +19,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/jeremiahpslewis/MLBizOps.jl",
+    repo="github.com/jeremiahpslewis/IteratedProcessSimulations.jl",
     devbranch="main",
 )

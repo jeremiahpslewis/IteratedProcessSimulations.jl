@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = MLBizOps
+CurrentModule = IteratedProcessSimulations
 ```
 
-# MLBizOps
+# IteratedProcessSimulations
 
-Documentation for [MLBizOps](https://github.com/jeremiahpslewis/MLBizOps.jl).
+Documentation for [IteratedProcessSimulations](https://github.com/jeremiahpslewis/IteratedProcessSimulations.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [MLBizOps]
+Modules = [IteratedProcessSimulations]
 ```

@@ -47,7 +47,7 @@ uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
-[[MLBizOps]]
+[[IteratedProcessSimulations]]
 path = ".."
 uuid = "4cc8113b-92e1-44eb-9dd6-a1e250a7ca3b"
 version = "0.1.0"
