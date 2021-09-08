@@ -42,13 +42,13 @@ function validate_inputs(ips::IteratedProcessSimulation)
     validate_simulation_description(ips.simulation_description)
 end
 
-function generate_data(epoch_parameters::DataFrameRow, epoch::Int)
+function generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrameRow)
 	n_datapoints = epoch_parameters.n_datapoints
 
 	# Generate one cycle of data
 	# TODO: Using 'burn in here', look into and drop this if unnecessary...
 	df = @chain epoch_parameters begin
-		ips.data_generating_process # Apply epoch_parameters to the data_generating_process
+		data_generating_process() # Apply epoch_parameters to the data_generating_process
 		rand(n_datapoints * 5)
 		DataFrame()
 		last(n_datapoints)
@@ -72,26 +72,27 @@ function run_simulation(ips::IteratedProcessSimulation)
 
 	# Iterate over Epochs (starting with epoch = 1)
 	for epoch_parameters in eachrow(ips.simulation_description)
-		epoch = epoch_parameters.epoch
 
 		# Generate new data
-		new_data = generate_data(epoch_parameters, epoch)
+		new_data = generate_data(ips.data_generating_process, epoch_parameters)
 
 		# Skip model training and decision for 'historical' epochs prior to epoch = 1
-		if epoch > 0
+		if epoch_parameters.epoch > 0
 
 			# Train model on existing data
-			m = ips.fit_model(epoch_parameters, simulation_df, new_data)
+			m = ips.fit_model(epoch_parameters, simulation_data, new_data)
 
 			# Save model summary for later analysis
-			append!(model_summary, (ips.summarize_model(epoch_parameters, m, simulation_data, new_data)), promote=true)
+			append!(model_summary, ips.summarize_model(epoch_parameters, m, simulation_data, new_data), promote=true)
 
 			# Save model object for later analysis
-			append!(model_objects, m)
-
-			# Choose datapoint 'observations' based on model
-			new_data = ips.choose_observations(epoch_parameters, m, new_data)
+			append!(model_objects, [m])
+		else
+			m = nothing
 		end
+
+		# Choose datapoint 'observations' based on model
+		new_data = ips.choose_observations(epoch_parameters, m, new_data)
 
 		# Add new data to dataset
 		append!(simulation_data, new_data, promote=true)	
@@ -108,14 +109,16 @@ end
 function run_simulation(ips::IteratedProcessSimulation, n_simulations::Int)
 	simulation_data = DataFrame()
 	model_summary = DataFrame()
+	model_objects = []
 
 	for i in 1:n_simulations
 		d_1, ms_1, mo_1 = run_simulation(ips)
 		append!(simulation_data, d_1)
-		append!(model_summary, m_1)
+		append!(model_summary, ms_1)
+		append!(model_objects, [mo_1])
 	end
 
-	return simulation_data, model_summary
+	return simulation_data, model_summary, model_objects
 end
 
 end
