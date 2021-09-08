@@ -12,9 +12,50 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 
 @testset "MLBizOps.jl" begin
 	@testset "ml_biz_ops_sim" begin
-		function summarize_logit_model_test(m, sim_data, epoch)
-			DataFrame(:epoch => [epoch], :income_coef => coef(values(m))[1])
+
+
+		function generate_data(ips::IteratedProcessSimulation, epoch::Int)
+			epoch_params = ips.simulation_params[epoch, :]
+			n_datapoints = epoch_params[!, :n_datapoints]
+		
+			# Generate one cycle of data
+			# TODO: Using 'burn in here', look into and drop this if unnecessary...
+			df = @chain epoch_params begin
+				ips.data_generating_process(_) # Apply epoch_params to the data_generating_process
+				rand(n_datapoints * 5)
+				DataFrame()
+				last(n_datapoints)
+			end
+		
+			# Add data generating process parameters for tracking
+			df = crossjoin(df, DataFrame(epoch_params)[!, [:epoch]])
+			df = @chain df @transform(:observed = true, :predicted_labels = nothing)
+			
+			return df
 		end
+		
+		function fit_model(ips::IteratedProcessSimulation, training_data::DataFrame, new_data::DataFrame, epoch::Int)
+			# Drop unobserved outcomes
+			training_data = @chain training_data @subset(:observed == true)
+		
+			# TODO: add example where model is dynamic, chosen via simulation parameters!
+			glm(@formula(default ~ 1 + income_eur), training_data, Binomial(), LogitLink())	
+		end
+		
+		function summarize_model(ips::IteratedProcessSimulation, model::StatsModels.TableRegressionModel, simulation_data::DataFrame, new_data::DataFrame, epoch::Int)
+			DataFrame(:epoch => [epoch], :income_coef => coef(values(model))[1])
+		end
+		
+		function choose_observations(ips::IteratedProcessSimulation, model::StatsModels.TableRegressionModel, new_data::DataFrame, epoch::Int)
+			# Select 'unobserved' datapoints
+			new_data[!, :predicted_labels] = predict(model, new_data)
+					
+			new_data = @chain new_data begin
+				@transform(:observed = true)
+			end
+		
+			return new_data
+		end		
 
 		test_dgp = @model params_1 begin
 			income_eur ~ Poisson(params_1[:mu_income])
@@ -26,15 +67,18 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 		n_epochs = 3
 		n_data_points_per_epoch = 20
 
-		test_dgp_params = DataFrame(
-			"n_datapoints" => fill(n_data_points_per_epoch, n_epochs),
+		test_simulation_description = DataFrame(
+			"n_datapoints" => [20, 40, 30],
 			"mu_income" => 1:n_epochs,
 			"epoch" => 0:(n_epochs-1),
-			"target_variable" => fill(:default, n_epochs),
-			"feature_variables" => fill([:income_eur], n_epochs),
-			"model_formula" => fill(@formula(default ~ 1 + income_eur), n_epochs)
 		)
-		test_data = generate_data(test_dgp, test_dgp_params[1, :])
+
+		ips = IteratedProcessSimulation(test_dgp, test_simulation_description)
+		test_data = generate_data(ips, 0)
+		@test nrow(test_data) == 20
+		@test ncol(test_data) == 5
+
+		test_data = generate_data(ips, 1)
 		@test nrow(test_data) == 20
 		@test ncol(test_data) == 5
 
