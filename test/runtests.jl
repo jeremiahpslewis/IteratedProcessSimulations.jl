@@ -28,38 +28,17 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 			"epoch" => 0:(n_epochs-1),
 		)
 
-		ips = IteratedProcessSimulation(test_dgp, test_simulation_description)#, generate_data, fit_model, summarize_model, choose_observations)
-		@test isa(ips, IteratedProcessSimulation)
+		epoch_parameters = eachrow(test_simulation_description)[1]
 
-		function generate_data(ips::IteratedProcessSimulation, epoch::Int)
-			epoch_params = @chain ips.simulation_description @subset(:epoch == epoch) eachrow() _[1]
-			n_datapoints = epoch_params.n_datapoints
-		
-			# Generate one cycle of data
-			# TODO: Using 'burn in here', look into and drop this if unnecessary...
-			df = @chain epoch_params begin
-				ips.data_generating_process # Apply epoch_params to the data_generating_process
-				rand(n_datapoints * 5)
-				DataFrame()
-				last(n_datapoints)
-			end
-		
-			# Add data generating process parameters for tracking
-			df = crossjoin(df, DataFrame(epoch_params)[!, [:epoch]])
-			df = @chain df @transform(:observed = false, :predicted_labels = nothing)
-			
-			return df
-		end
-
-		test_data = generate_data(ips, 0)
+		test_data = generate_data(epoch_parameters, 0)
 		@test nrow(test_data) == 200
 		@test ncol(test_data) == 7
 
-		test_data_1 = generate_data(ips, 1)
+		test_data_1 = generate_data(epoch_parameters, 1)
 		@test nrow(test_data_1) == 40
 		@test ncol(test_data_1) == 7
 
-		function fit_model(ips::IteratedProcessSimulation, training_data::DataFrame, new_data::DataFrame, epoch::Int)
+		function fit_model(epoch_parameters::DataFrameRow, training_data::DataFrame, new_data::DataFrame)
 			# Drop unobserved outcomes
 			training_data = @chain training_data @subset(:observed == true)
 		
@@ -68,16 +47,16 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 		end
 
 		test_data = @chain test_data @transform(:observed = true)
-		m = fit_model(ips, test_data, test_data_1, 1)
+		m = fit_model(epoch_parameters, test_data, test_data_1, 1)
 		@test coef(m) ≈ [0.18764107801174243, 0.06135920993917277]
 		
-		function summarize_model(ips::IteratedProcessSimulation, model::StatsModels.TableRegressionModel, simulation_data::DataFrame, new_data::DataFrame, epoch::Int)
+		function summarize_model(epoch_parameters::DataFrameRow, model::StatsModels.TableRegressionModel, simulation_data::DataFrame, new_data::DataFrame)
 			DataFrame(:epoch => [epoch], :income_coef => coef(values(model))[1])
 		end
 		
-		@test summarize_model(ips, m, test_data, test_data, 1)[1, :income_coef] ≈ 0.019
+		@test summarize_model(epoch_parameters, m, test_data, test_data, 1)[1, :income_coef] ≈ 0.019
 
-		function choose_observations(ips::IteratedProcessSimulation, model::StatsModels.TableRegressionModel, new_data::DataFrame, epoch::Int)
+		function choose_observations(epoch_parameters::DataFrameRow, model::StatsModels.TableRegressionModel, new_data::DataFrame)
 			# Select 'unobserved' datapoints
 			new_data[!, :predicted_labels] = predict(model, new_data)
 					
@@ -91,7 +70,9 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 		df = choose_observations(ips, m, test_data_1, 1)
 		@test nrow(df) == 40
 		@test (@chain df @combine(sum(:observed)) _[!, :observed_sum][1]) == 40
-	
+
+		ips = IteratedProcessSimulation(test_dgp, test_simulation_description, fit_model, summarize_model, choose_observations)
+		@test isa(ips, IteratedProcessSimulation)		
 
 		# @test_throws 
 		run_simulation(ips)
@@ -103,8 +84,8 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 	end
 
     @testset "Train model" begin
-		# function train_model_demo_1(training_data::DataFrame, epoch_params)
-		# 	m = glm(epoch_params.model_formula, training_data, Bernoulli(), LogitLink())	
+		# function train_model_demo_1(training_data::DataFrame, epoch_parameters)
+		# 	m = glm(epoch_parameters.model_formula, training_data, Bernoulli(), LogitLink())	
 		# 	return m
 		# end		
 	

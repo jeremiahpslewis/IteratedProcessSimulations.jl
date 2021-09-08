@@ -1,5 +1,7 @@
 module IteratedProcessSimulations
 
+import Base: @invokelatest
+
 using DataFrames
 using DataFrameMacros
 
@@ -11,11 +13,14 @@ using UUIDs
 export IteratedProcessSimulation
 export validate_inputs
 export run_simulation
-
+export generate_data
 
 struct IteratedProcessSimulation
 	data_generating_process::Soss.Model
 	simulation_description::DataFrame
+	fit_model::Function
+	summarize_model::Function
+	choose_observations::Function
 end
 
 # Write your package code here.
@@ -35,7 +40,25 @@ end
 
 function validate_inputs(ips::IteratedProcessSimulation)
     validate_simulation_description(ips.simulation_description)
-    validate_train_model_function(train_model)
+end
+
+function generate_data(epoch_parameters::DataFrameRow, epoch::Int)
+	n_datapoints = epoch_parameters.n_datapoints
+
+	# Generate one cycle of data
+	# TODO: Using 'burn in here', look into and drop this if unnecessary...
+	df = @chain epoch_parameters begin
+		ips.data_generating_process # Apply epoch_parameters to the data_generating_process
+		rand(n_datapoints * 5)
+		DataFrame()
+		last(n_datapoints)
+	end
+
+	# Add data generating process parameters for tracking
+	df = crossjoin(df, DataFrame(epoch_parameters)[!, [:epoch]])
+	df = @chain df @transform(:observed = false, :predicted_labels = nothing)
+	
+	return df
 end
 
 function run_simulation(ips::IteratedProcessSimulation)
@@ -48,25 +71,26 @@ function run_simulation(ips::IteratedProcessSimulation)
 	validate_inputs(ips)
 
 	# Iterate over Epochs (starting with epoch = 1)
-	for epoch in ips.simulation_description[!, :epoch]
+	for epoch_parameters in eachrow(ips.simulation_description)
+		epoch = epoch_parameters.epoch
 
 		# Generate new data
-		new_data = generate_data(ips, epoch)
+		new_data = generate_data(epoch_parameters, epoch)
 
 		# Skip model training and decision for 'historical' epochs prior to epoch = 1
 		if epoch > 0
 
 			# Train model on existing data
-			m = fit_model(ips, simulation_df, new_data, epoch)
+			m = ips.fit_model(epoch_parameters, simulation_df, new_data)
 
 			# Save model summary for later analysis
-			append!(model_summary, summarize_model(ips, m, simulation_data, new_data, epoch), promote=true)
+			append!(model_summary, (ips.summarize_model(epoch_parameters, m, simulation_data, new_data)), promote=true)
 
 			# Save model object for later analysis
 			append!(model_objects, m)
 
 			# Choose datapoint 'observations' based on model
-			new_data = choose_observations(ips, m, new_data, epoch)
+			new_data = ips.choose_observations(epoch_parameters, m, new_data)
 		end
 
 		# Add new data to dataset
@@ -81,7 +105,7 @@ function run_simulation(ips::IteratedProcessSimulation)
 	return simulation_data, model_summary, model_objects
 end
 
-function ml_biz_ops_sim(ips::IteratedProcessSimulation, n_simulations::Int)
+function run_simulation(ips::IteratedProcessSimulation, n_simulations::Int)
 	simulation_data = DataFrame()
 	model_summary = DataFrame()
 
