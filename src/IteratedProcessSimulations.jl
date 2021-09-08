@@ -43,7 +43,7 @@ function validate_simulation_description(simulation_description::DataFrame)
 
     (sort(simulation_description.epoch) == simulation_description.epoch) || throw(ArgumentError("simulation_description must be sorted by :epoch"))
 	
-	length(simulation_description.epoch) == unique(length(simulation_description.epoch)) || throw(ArgumentError(":epoch may not have duplicate values in simulation_description"))
+	length(simulation_description.epoch) == length(unique(simulation_description.epoch)) || throw(ArgumentError(":epoch may not have duplicate values in simulation_description"))
 end
 
 # TODO: validate that model takes data frame and dataframe row as inputs and is type 'function'
