@@ -126,6 +126,7 @@ function convert_dataframe_to_recommender(df::DataFrame, n_users, n_books)
 end
 
 function fit_model(epoch_parameters::DataFrameRow, training_data::DataFrame, new_data::DataFrame)
+        training_data = copy(training_data)
         append!(training_data, new_data, promote=true)
 
         n_users = maximum(training_data[!, :user_id])
@@ -159,11 +160,11 @@ function choose_observations(epoch_parameters::DataFrameRow, recommender, new_da
 
     # Each user gets to read an additional book!
     for user_id in unique((@chain simulation_data @subset(!:observed) _[!, :user_id]))
-        user_prediction = recommend(recommender, user_id, 1, (@chain new_data @subset(!:observed & (:user_id == user_id)) @select(:book_id) unique _[!, :book_id]))
+        user_prediction = recommend(recommender, user_id, 1, (@chain simulation_data @subset(!:observed & (:user_id == user_id)) @select(:book_id) unique _[!, :book_id]))
         best_book = user_prediction[1][1]
         best_book_score = user_prediction[1][2]
         # if best_book_score > 0 # If utility is positive, then flip to 'observed'
-        #     new_data[(new_data[!, :user_id] .== user_id) .& (new_data[!, :book_id] .== best_book), :observed] = true
+        #     simulation_data[(simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book), :observed] = true
         # end
     end
 
@@ -179,4 +180,8 @@ end
 ips = IteratedProcessSimulation(book_dgp, book_sim_description, transform_data, fit_model, summarize_model, choose_observations)
 
 simulation_data, model_summary, model_objects = run_simulation(ips)
+
+# TODO: for debugging, remove
+user_id = 1
+recommender = model_objects[36]
 ```
