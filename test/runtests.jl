@@ -5,7 +5,7 @@ using DataFrameMacros
 
 using Soss
 using MeasureTheory
-using StatsModels # TODO: remove from package dependencies
+using StatsModels
 using Chain
 
 import Distributions: Binomial
@@ -38,9 +38,9 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 	@test nrow(test_data_1) == 40
 	@test ncol(test_data_1) == 7
 
-	test_data = generate_data(test_dgp, test_simulation_description)
-	@test nrow(test_data) == 270
-	@test ncol(test_data) == 7
+	test_data_2 = generate_data(test_dgp, test_simulation_description)
+	@test nrow(test_data_2) == 270
+	@test ncol(test_data_2) == 7
 
 	function fit_model(epoch_parameters::DataFrameRow, training_data::DataFrame, new_data::DataFrame)
 		# Drop unobserved outcomes

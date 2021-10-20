@@ -92,8 +92,8 @@ Generate data from a data_generating_process for a series of epochs.
 """
 function generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrame)
 	df = DataFrame()
-	for row in epoch_parameters
-		append!(df, generate_data(data_generating_process, epoch_parameters))
+	for epoch_row in eachrow(epoch_parameters)
+		append!(df, generate_data(data_generating_process, epoch_row))
 	end
 	return df
 end
