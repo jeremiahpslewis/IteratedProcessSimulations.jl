@@ -53,14 +53,18 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 	test_data = @chain test_data @transform(:observed = true)
 	m = fit_model(epoch_parameters, test_data, test_data_1)
 	# @test coef(m) ≈ [0.18764107801174243, 0.06135920993917277]
-	
+
+	function transform_data(df::DataFrame)
+		return df
+	end
+
 	function summarize_model(epoch_parameters::DataFrameRow, model::StatsModels.TableRegressionModel, simulation_data::DataFrame, new_data::DataFrame)
 		DataFrame(:epoch => [epoch_parameters.epoch], :income_coef => coef(values(model))[1])
 	end
 	
 	# @test summarize_model(epoch_parameters, m, test_data, test_data)[1, :income_coef] ≈ 0.019
 
-	function choose_observations(epoch_parameters::DataFrameRow, model::Union{StatsModels.TableRegressionModel, Nothing}, new_data::DataFrame)
+	function choose_observations(epoch_parameters::DataFrameRow, model::Union{StatsModels.TableRegressionModel, Nothing}, new_data::DataFrame, simulation_data::DataFrame)
 		# Select 'unobserved' datapoints
 
 		# All 'historical' data points are considered observed
@@ -76,14 +80,17 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 			end	
 		end
 
-		return new_data
+		# Add new data to dataset
+		append!(simulation_data, new_data, promote=true)	
+
+		return simulation_data
 	end		
 
-	df = choose_observations(epoch_parameters, m, test_data_1)
-	@test nrow(df) == 40
+	df = choose_observations(epoch_parameters, m, test_data_1, test_data_1)
+	@test nrow(df) == 80
 	@test (@chain df @combine(sum(:observed)) _[!, :observed_sum][1]) == 40
 
-	ips = IteratedProcessSimulation(test_dgp, test_simulation_description, fit_model, summarize_model, choose_observations)
+	ips = IteratedProcessSimulation(test_dgp, test_simulation_description, transform_data, fit_model, summarize_model, choose_observations)
 	@test isa(ips, IteratedProcessSimulation)		
 
 	sim_data, model_summary, model_objects = run_simulation(ips)
