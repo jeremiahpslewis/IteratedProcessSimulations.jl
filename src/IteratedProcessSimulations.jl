@@ -77,6 +77,7 @@ function generate_data(data_generating_process::Soss.Model, epoch_parameters::Da
 		data_generating_process() # Apply data_generating_process function to epoch_parameters
 		rand(n_datapoints) # Sample from data_generating_process
 		DataFrame() # Return a DataFrame
+		@transform(:id = string(UUIDs.uuid4()))
 	end
 
 	df = @chain df @transform(:epoch = epoch_parameters.epoch, :observed = false, :predicted_labels = nothing)

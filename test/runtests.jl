@@ -31,16 +31,16 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 
 	test_data = generate_data(test_dgp, epoch_parameters)
 	@test nrow(test_data) == 200
-	@test ncol(test_data) == 7
+	@test ncol(test_data) == 8
 
 	epoch_parameters = eachrow(test_simulation_description)[2]
 	test_data_1 = generate_data(test_dgp, epoch_parameters)
 	@test nrow(test_data_1) == 40
-	@test ncol(test_data_1) == 7
+	@test ncol(test_data_1) == 8
 
 	test_data_2 = generate_data(test_dgp, test_simulation_description)
 	@test nrow(test_data_2) == 270
-	@test ncol(test_data_2) == 7
+	@test ncol(test_data_2) == 8
 
 	function fit_model(epoch_parameters::DataFrameRow, training_data::DataFrame, new_data::DataFrame)
 		# Drop unobserved outcomes
@@ -88,11 +88,11 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 
 	sim_data, model_summary, model_objects = run_simulation(ips)
 
-	@test ncol(sim_data) == 8
+	@test ncol(sim_data) == 9
 	@test nrow(sim_data) == 270
 
 	sim_data, model_summary, model_objects = run_simulation(ips, 5)
 
-	@test ncol(sim_data) == 8
+	@test ncol(sim_data) == 9
 	@test nrow(sim_data) == 1350
 end
