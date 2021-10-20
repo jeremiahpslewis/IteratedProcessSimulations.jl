@@ -85,6 +85,20 @@ function generate_data(data_generating_process::Soss.Model, epoch_parameters::Da
 end
 
 """
+	generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrame)
+
+Generate data from a data_generating_process for a series of epochs.
+
+"""
+function generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrame)
+	df = DataFrame()
+	for row in epoch_parameters
+		append!(df, generate_data(data_generating_process, epoch_parameters))
+	end
+	return df
+end
+
+"""
 	run_simulation(ips::IteratedProcessSimulation)
 
 Run a single iterated process simulation.

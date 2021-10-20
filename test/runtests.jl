@@ -38,6 +38,10 @@ import GLM: glm, LogitLink, fit, coef, predict, @formula
 	@test nrow(test_data_1) == 40
 	@test ncol(test_data_1) == 7
 
+	test_data = generate_data(test_dgp, test_simulation_description)
+	@test nrow(test_data) == 270
+	@test ncol(test_data) == 7
+
 	function fit_model(epoch_parameters::DataFrameRow, training_data::DataFrame, new_data::DataFrame)
 		# Drop unobserved outcomes
 		training_data = @chain training_data @subset(:observed == true)
