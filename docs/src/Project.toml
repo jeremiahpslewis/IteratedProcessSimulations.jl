@@ -1,0 +1,10 @@
+[deps]
+Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
+DataFrameMacros = "75880514-38bc-4a95-a458-c2aea5a3a702"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+IteratedProcessSimulations = "4cc8113b-92e1-44eb-9dd6-a1e250a7ca3b"
+MeasureTheory = "eadaa1a4-d27c-401d-8699-e962e1bbc33b"
+Recommendation = "d27d45ae-66f1-5d53-80d2-11744f5c9556"
+Soss = "8ce77f84-9b61-11e8-39ff-d17a774bf41c"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
