@@ -203,7 +203,7 @@ utility_rollup = @chain simulation_data begin
     @groupby(:user_id, :user_utility_weight_quality, :user_utility_weight_topicality)
     @combine(:user_utility_achieved = sum(:user_book_utility[:observed]),
              :user_utility_predicted = sum(:predicted_utility[:observed]), # this should be strictly positive
-             :n_books_purchased = length(:predicted_utility[:observed])
+             :n_books_purchased = length(:predicted_utility[:observed]),
              :user_utility_possible = @c sum(sort(:user_book_utility, rev=true)[1:n_months]) # user has the possibility of choosing X books = n_months
              )
     @transform(:pct_utility_achieved = :user_utility_achieved / :user_utility_possible)
@@ -222,7 +222,7 @@ utility_rollup |> @vlplot(:bar, width=500, height=300, x={:user_utility_achieved
 ## Plot Predicted Utility vs Actual Utility
 
 ```@example 1
-utility_rollup |> @vlplot(:point, width=500, height=500, x={:user_utility_achieved, title="Total Utility Achieved"}, y={:user_utility_possible, title="Total Utility Possible"}, title="Model Relatively Ineffective")
+utility_rollup |> @vlplot(:point, width=500, height=500, x={:user_utility_achieved, title="Total Utility Achieved"}, y={:user_utility_possible, title="Total Utility Possible"}, title="Model Relatively Ineffective", resolve={scale={x=:independent, y=:independent}})
 ```
 
 ## Plot Percent Utility Achieved across Users
