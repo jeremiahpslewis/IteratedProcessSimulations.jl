@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Recommender Vignette · IteratedProcessSimulations.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://jeremiahpslewis.github.io/IteratedProcessSimulations.jl/Vignette-Recommender/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">IteratedProcessSimulations.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Recommender Vignette</a><ul class="internal"><li><a class="tocitem" href="#Simulation-Premises"><span>Simulation Premises</span></a></li><li><a class="tocitem" href="#Simulate-User-Preferences"><span>Simulate User Preferences</span></a></li><li><a class="tocitem" href="#Create-user-sample"><span>Create user sample</span></a></li><li><a class="tocitem" href="#Define-data-generating-process-for-the-books"><span>Define data generating process for the books</span></a></li><li><a class="tocitem" href="#Build-user-book-dataframe-via-transform_data-function"><span>Build user-book dataframe via <code>transform_data</code> function</span></a></li><li><a class="tocitem" href="#Define-Machine-Learning-Model"><span>Define Machine Learning Model</span></a></li><li><a class="tocitem" href="#Put-it-all-together-and-run-the-simulation"><span>Put it all together and run the simulation</span></a></li><li><a class="tocitem" href="#Assess-outcome-quality"><span>Assess outcome quality</span></a></li><li><a class="tocitem" href="#Plot-Utility-Distribution-across-Users"><span>Plot Utility Distribution across Users</span></a></li><li><a class="tocitem" href="#Plot-Predicted-Utility-vs-Actual-Utility"><span>Plot Predicted Utility vs Actual Utility</span></a></li><li><a class="tocitem" href="#Plot-Percent-Utility-Achieved-across-Users"><span>Plot Percent Utility Achieved across Users</span></a></li><li><a class="tocitem" href="#Plot-User-Preferences"><span>Plot User Preferences</span></a></li><li><a class="tocitem" href="#Plot-Individual-Preferences-Against-Total-Utility-Possible"><span>Plot Individual Preferences Against Total Utility Possible</span></a></li><li><a class="tocitem" href="#Plot-Individual-Preferences-Against-Utility"><span>Plot Individual Preferences Against Utility</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Recommender Vignette</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Recommender Vignette</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/jeremiahpslewis/IteratedProcessSimulations.jl/blob/master/docs/src/Vignette-Recommender.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Recommender-Vignette"><a class="docs-heading-anchor" href="#Recommender-Vignette">Recommender Vignette</a><a id="Recommender-Vignette-1"></a><a class="docs-heading-anchor-permalink" href="#Recommender-Vignette" title="Permalink"></a></h1><pre><code class="language-julia hljs">using IteratedProcessSimulations
+using Recommendation
+using DataFrames
+using Soss
+using MeasureTheory
+using Chain
+using DataFrameMacros
+using UUIDs
+using VegaLite
+import Distributions</code></pre><h2 id="Simulation-Premises"><a class="docs-heading-anchor" href="#Simulation-Premises">Simulation Premises</a><a id="Simulation-Premises-1"></a><a class="docs-heading-anchor-permalink" href="#Simulation-Premises" title="Permalink"></a></h2><p>A bookstore has customer account data on previous purchases as well as a monthly newsletter in which it can suggest three books to read, personalized to each customer.</p><p>All books cost the same. Each book has latent attributes, quality and topicality, which are fixed. Each customer has unique preferences weighting these two factors and resulting in a utility score. The customer chooses the highest utility book each month, as long as it has a utility greater than 0 (the utility of the most attractive non-book good available and average score across all books and attributes).</p><p>New books are released each month. The bookstore uses a collaborative filter to identify optimal books to offer to each user. Once a user has chosen a book, its user-specific utility becomes visible to the bookstore (i.e. a rating).</p><p>To gather feedback on newly released books, the bookstore distributes copies to 10% of users in the release month, in exchange for their rating which becomes available instantly.</p><p>The simulation runs over a course of 36 months.</p><h2 id="Simulate-User-Preferences"><a class="docs-heading-anchor" href="#Simulate-User-Preferences">Simulate User Preferences</a><a id="Simulate-User-Preferences-1"></a><a class="docs-heading-anchor-permalink" href="#Simulate-User-Preferences" title="Permalink"></a></h2><pre><code class="language-julia hljs">n_users = 100
+n_books_per_month = 10
+n_months = 24
+pct_pre_read = 0.1  # X% of new books are &#39;pre-read&#39; by users
+
+# Define data generating process for the users
+user_dgp = @model params begin
+        user_utility_weight_quality ~ Distributions.TruncatedNormal(0.5, 0.1, 0, 1)
+        user_utility_weight_topicality = 1 - user_utility_weight_quality
+end
+
+user_sim_description = DataFrame(
+    &quot;n_datapoints&quot; =&gt; [n_users],
+    &quot;epoch&quot; =&gt; [0],
+)</code></pre><h2 id="Create-user-sample"><a class="docs-heading-anchor" href="#Create-user-sample">Create user sample</a><a id="Create-user-sample-1"></a><a class="docs-heading-anchor-permalink" href="#Create-user-sample" title="Permalink"></a></h2><pre><code class="language-julia hljs">user_attributes = @chain generate_data(user_dgp, user_sim_description) begin
+    @transform(:user_id = @c 1:length(:id))
+    @select(:user_id, :user_utility_weight_quality, :user_utility_weight_topicality)
+end</code></pre><h2 id="Define-data-generating-process-for-the-books"><a class="docs-heading-anchor" href="#Define-data-generating-process-for-the-books">Define data generating process for the books</a><a id="Define-data-generating-process-for-the-books-1"></a><a class="docs-heading-anchor-permalink" href="#Define-data-generating-process-for-the-books" title="Permalink"></a></h2><pre><code class="language-julia hljs">book_dgp = @model params begin
+        quality ~ Distributions.TruncatedNormal(10, 3, 0, 100)
+        topicality ~ Distributions.TruncatedNormal(10, 3, 0, 100)
+end
+
+book_sim_description = DataFrame(
+    &quot;n_datapoints&quot; =&gt; fill(n_books_per_month, 36),
+    &quot;epoch&quot; =&gt; 1:36,
+)
+
+# TODO: remove line, just for testing
+book_attributes = generate_data(book_dgp, eachrow(book_sim_description)[2])</code></pre><h2 id="Build-user-book-dataframe-via-transform_data-function"><a class="docs-heading-anchor" href="#Build-user-book-dataframe-via-transform_data-function">Build user-book dataframe via <code>transform_data</code> function</a><a id="Build-user-book-dataframe-via-transform_data-function-1"></a><a class="docs-heading-anchor-permalink" href="#Build-user-book-dataframe-via-transform_data-function" title="Permalink"></a></h2><pre><code class="language-julia hljs">function transform_data(book_df)
+
+    book_df = @chain book_df @transform(:book_id = @c 1:nrow(book_df)) @transform(:book_id = :book_id + (:epoch - 1) * nrow(book_df))
+    user_book_df = @chain book_df begin
+        crossjoin(user_attributes)
+    end
+
+    user_book_df = @chain user_book_df begin
+        @transform(
+            :user_book_utility = :topicality * :user_utility_weight_topicality + :quality * :user_utility_weight_quality,
+            # X% of new books are &#39;pre-read&#39; by users
+            :pre_read = rand(Bernoulli(pct_pre_read))
+                   )
+    end
+
+    user_book_df[!, :predicted_utility] .= missing
+    user_book_df[!, :predicted_utility] = convert(Vector{Union{Missing, Float64}}, user_book_df[!, :predicted_utility])
+
+    return user_book_df
+end
+
+# TODO: remove line, just for testing
+new_data = transform_data(book_attributes)</code></pre><h2 id="Define-Machine-Learning-Model"><a class="docs-heading-anchor" href="#Define-Machine-Learning-Model">Define Machine Learning Model</a><a id="Define-Machine-Learning-Model-1"></a><a class="docs-heading-anchor-permalink" href="#Define-Machine-Learning-Model" title="Permalink"></a></h2><pre><code class="language-julia hljs"># TODO: remove line, just for testing
+training_data = new_data
+
+function convert_dataframe_to_recommender(df::DataFrame, n_users, n_books)
+    event_list = []
+    for row in eachrow(df)
+        # Here we assume that a user knows and reports their utility after having read the book
+        push!(event_list, Event(row[:user_id], row[:book_id], row[:user_book_utility]))
+    end
+
+    event_list = convert(Vector{Event}, event_list)
+    
+    data = DataAccessor(event_list, n_users, n_books)
+
+    return data
+end
+
+function fit_model(epoch_parameters::DataFrameRow, training_data::DataFrame, new_data::DataFrame)
+        # Note, the statement below permanently adds the new data to the training dataset
+        append!(training_data, new_data, promote=true)
+
+        n_users = maximum(training_data[!, :user_id])
+        n_books = maximum(training_data[!, :book_id])
+        # Drop unobserved outcomes
+        training_data = @chain training_data @subset(:observed | :pre_read)
+            
+
+        data = convert_dataframe_to_recommender(training_data, n_users, n_books)
+        recommender = SVD(data, 10)
+        build!(recommender)
+
+        return recommender
+end
+
+fit_model(eachrow(book_sim_description)[1], training_data, new_data)</code></pre><pre><code class="language-julia hljs"># Skip using this to track parameter / model outcomes for now, but could be useful in a real study...
+function summarize_model(epoch_parameters::DataFrameRow, model, simulation_data::DataFrame, new_data::DataFrame)
+    DataFrame(:epoch =&gt; [epoch_parameters.epoch])
+end</code></pre><pre><code class="language-julia hljs">function choose_observations(epoch_parameters::DataFrameRow, recommender, new_data::DataFrame, simulation_data::DataFrame)
+    # NOTE: as the new_data is already added to the simulation data during the model fit, no need to use `new_data` here
+
+    # Each user gets to read an additional book!
+    for user_id in unique((@chain simulation_data @subset(!(:observed | :pre_read)) _[!, :user_id]))
+        user_prediction = recommend(recommender, user_id, 1, (@chain simulation_data @subset(!(:observed | :pre_read) &amp; (:user_id == user_id)) @select(:book_id) unique _[!, :book_id]))
+        best_book = user_prediction[1][1]
+        best_book_score = user_prediction[1][2]
+        simulation_data[((simulation_data[!, :user_id] .== user_id) .&amp; (simulation_data[!, :book_id] .== best_book)), :observed] .= true
+        simulation_data[((simulation_data[!, :user_id] .== user_id) .&amp; (simulation_data[!, :book_id] .== best_book)), :predicted_utility] .= best_book_score
+    end
+
+    return simulation_data
+end	</code></pre><h2 id="Put-it-all-together-and-run-the-simulation"><a class="docs-heading-anchor" href="#Put-it-all-together-and-run-the-simulation">Put it all together and run the simulation</a><a id="Put-it-all-together-and-run-the-simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Put-it-all-together-and-run-the-simulation" title="Permalink"></a></h2><pre><code class="language-julia hljs">ips = IteratedProcessSimulation(book_dgp, book_sim_description, transform_data, fit_model, summarize_model, choose_observations)
+
+simulation_data, model_summary, model_objects = run_simulation(ips)
+
+# TODO: for debugging, remove
+user_id = 1
+recommender = model_objects[36]</code></pre><h2 id="Assess-outcome-quality"><a class="docs-heading-anchor" href="#Assess-outcome-quality">Assess outcome quality</a><a id="Assess-outcome-quality-1"></a><a class="docs-heading-anchor-permalink" href="#Assess-outcome-quality" title="Permalink"></a></h2><pre><code class="language-julia hljs">utility_rollup = @chain simulation_data begin
+    @groupby(:user_id, :user_utility_weight_quality, :user_utility_weight_topicality)
+    @combine(:user_utility_achieved = sum(:user_book_utility[:observed]), # may be negative if pos-predicted utility turns out to be negative
+             :user_utility_predicted = sum(:predicted_utility[:observed]), # this should be strictly positive
+             :user_utility_possible = @c sum(filter(x -&gt; x &gt; 0, sort(:user_book_utility, rev=true)[1:n_months])) # user has the possibility of choosing X books = n_months
+             ) 
+    @transform(:pct_utility_achieved = :user_utility_achieved / :user_utility_possible)
+end</code></pre><h2 id="Plot-Utility-Distribution-across-Users"><a class="docs-heading-anchor" href="#Plot-Utility-Distribution-across-Users">Plot Utility Distribution across Users</a><a id="Plot-Utility-Distribution-across-Users-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-Utility-Distribution-across-Users" title="Permalink"></a></h2><pre><code class="language-julia hljs">utility_rollup |&gt; @vlplot(:bar, width=500, height=300, x={:user_utility_achieved, bin={step=0.5}, title=&quot;Total Utility Achieved&quot;}, y={&quot;count()&quot;, title=&quot;User Count&quot;}, title=&quot;Utility Achieved per User&quot;)</code></pre><h2 id="Plot-Predicted-Utility-vs-Actual-Utility"><a class="docs-heading-anchor" href="#Plot-Predicted-Utility-vs-Actual-Utility">Plot Predicted Utility vs Actual Utility</a><a id="Plot-Predicted-Utility-vs-Actual-Utility-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-Predicted-Utility-vs-Actual-Utility" title="Permalink"></a></h2><pre><code class="language-julia hljs">utility_rollup |&gt; @vlplot(:point, width=500, height=500, x={:user_utility_achieved, title=&quot;Total Utility Achieved&quot;}, y={:user_utility_possible, title=&quot;Total Utility Possible&quot;}, title=&quot;Model Relatively Ineffective&quot;)</code></pre><h2 id="Plot-Percent-Utility-Achieved-across-Users"><a class="docs-heading-anchor" href="#Plot-Percent-Utility-Achieved-across-Users">Plot Percent Utility Achieved across Users</a><a id="Plot-Percent-Utility-Achieved-across-Users-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-Percent-Utility-Achieved-across-Users" title="Permalink"></a></h2><pre><code class="language-julia hljs">utility_rollup |&gt; @vlplot(width=500, height=300, :bar, x={:pct_utility_achieved, bin={step=0.005}, title=&quot;Percent Utility Achieved&quot;, axis={format=&quot;%&quot;}}, y={&quot;count()&quot;, title=&quot;User Count&quot;}, title=&quot;Percentage of Possible Utility Achieved per User&quot;)</code></pre><h2 id="Plot-User-Preferences"><a class="docs-heading-anchor" href="#Plot-User-Preferences">Plot User Preferences</a><a id="Plot-User-Preferences-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-User-Preferences" title="Permalink"></a></h2><pre><code class="language-julia hljs">utility_rollup |&gt; @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.05}, title=&quot;User Preference for Quality (over Topicality)&quot;, axis={format=&quot;%&quot;}}, y={&quot;count()&quot;, title=&quot;User Count&quot;}, title=&quot;User Preferences, Percentage Weight Quality (vs Topicality)&quot;)</code></pre><h2 id="Plot-Individual-Preferences-Against-Total-Utility-Possible"><a class="docs-heading-anchor" href="#Plot-Individual-Preferences-Against-Total-Utility-Possible">Plot Individual Preferences Against Total Utility Possible</a><a id="Plot-Individual-Preferences-Against-Total-Utility-Possible-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-Individual-Preferences-Against-Total-Utility-Possible" title="Permalink"></a></h2><pre><code class="language-julia hljs">utility_rollup |&gt; @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.01}, title=&quot;User Preference for Quality (over Topicality)&quot;, axis={format=&quot;%&quot;}}, y={&quot;mean(user_utility_possible)&quot;, title=&quot;Possible Utility&quot;}, title=&quot;Possible Utility by User Preferences&quot;)</code></pre><h2 id="Plot-Individual-Preferences-Against-Utility"><a class="docs-heading-anchor" href="#Plot-Individual-Preferences-Against-Utility">Plot Individual Preferences Against Utility</a><a id="Plot-Individual-Preferences-Against-Utility-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-Individual-Preferences-Against-Utility" title="Permalink"></a></h2><pre><code class="language-julia hljs">utility_rollup |&gt; @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.01}, title=&quot;User Preference for Quality (over Topicality)&quot;, axis={format=&quot;%&quot;}}, y={&quot;mean(pct_utility_achieved)&quot;, title=&quot;Average Percent Utility Achieved&quot;, axis={format=&quot;%&quot;}}, title=&quot;Percentage of Possible Utility Achieved by User Preferences&quot;)</code></pre><pre><code class="language-julia hljs">utility_rollup |&gt; @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.01}, title=&quot;User Preference for Quality (over Topicality)&quot;, axis={format=&quot;%&quot;}}, y={&quot;mean(user_utility_achieved)&quot;, title=&quot;Average Utility Achieved&quot;}, title=&quot;Average Utility Achieved by User Preferences&quot;)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 21 October 2021 13:27">Thursday 21 October 2021</span>. Using Julia version 1.7.0-rc1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
