@@ -62,6 +62,8 @@ user_attributes = @chain generate_data(user_dgp, user_sim_description) begin
     @transform(:user_id = @c 1:length(:id))
     @select(:user_id, :user_utility_weight_quality, :user_utility_weight_topicality)
 end
+
+first(user_attributes, 4)
 ```
 
 ## Define data generating process for the books
@@ -79,6 +81,8 @@ book_sim_description = DataFrame(
 
 # TODO: remove line, just for testing
 book_attributes = generate_data(book_dgp, eachrow(book_sim_description)[2])
+
+first(book_attributes, 4)
 ```
 
 ## Build user-book dataframe via `transform_data` function
@@ -107,6 +111,8 @@ end
 
 # TODO: remove line, just for testing
 new_data = transform_data(book_attributes)
+
+first(new_data, 4)
 ```
 
 ## Define Machine Learning Model
@@ -200,6 +206,8 @@ utility_rollup = @chain simulation_data begin
              ) 
     @transform(:pct_utility_achieved = :user_utility_achieved / :user_utility_possible)
 end
+
+first(utility_rollup, 6)
 ```
 
 
