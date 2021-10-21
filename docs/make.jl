@@ -15,6 +15,7 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Recommender Vignette" => "Vignette-Recommender.md",
     ],
 )
 

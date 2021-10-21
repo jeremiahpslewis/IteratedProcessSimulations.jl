@@ -10,6 +10,7 @@ using Chain
 using DataFrameMacros
 using UUIDs
 using VegaLite
+import Distributions
 ```
 
 ## Simulation Premises
@@ -37,14 +38,14 @@ The simulation runs over a course of 36 months.
 ## Simulate User Preferences
 
 ```julia
-n_users = 500
+n_users = 100
 n_books_per_month = 10
 n_months = 36
 pct_pre_read = 0.1  # X% of new books are 'pre-read' by users
 
 # Define data generating process for the users
 user_dgp = @model params begin
-        utility_weight_quality_raw ~ Normal(0, 0.3)
+        utility_weight_quality_raw ~ Normal(0, 5)
         user_utility_weight_quality = logistic(utility_weight_quality_raw)
         user_utility_weight_topicality = 1 - user_utility_weight_quality
 end
@@ -233,10 +234,10 @@ utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_q
 ## Plot Individual Preferences Against Utility
 
 ```julia
-utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.1}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(pct_utility_achieved)", title="User Count", axis={format="%"}}, title="Percentage of Possible Utility Achieved per User")
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.05}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(pct_utility_achieved)", title="Average Percent Utility Achieved", axis={format="%"}}, title="Percentage of Possible Utility Achieved by User Preferences")
 ```
 
 
 ```julia
-utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.1}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(user_utility_achieved)", title="User Count"}, title="Percentage of Possible Utility Achieved per User")
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.1}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(user_utility_achieved)", title="Average Utility Achieved"}, title="Average Utility Achieved by User Preferences")
 ```
