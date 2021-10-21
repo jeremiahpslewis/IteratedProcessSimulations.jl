@@ -9,6 +9,7 @@ using MeasureTheory
 using Chain
 using DataFrameMacros
 using UUIDs
+using VegaLite
 ```
 
 ## Simulation Premises
@@ -94,9 +95,12 @@ function transform_data(book_df)
         @transform(
             :user_book_utility = :topicality * :user_utility_weight_quality + :quality * :user_utility_weight_topicality,
             # X% of new books are 'pre-read' by users
-            :observed = rand(Bernoulli(pct_pre_read))
+            :pre_read = rand(Bernoulli(pct_pre_read))
                    )
     end
+
+    user_book_df[!, :predicted_utility] .= missing
+    user_book_df[!, :predicted_utility] = convert(Vector{Union{Missing, Float64}}, user_book_df[!, :predicted_utility])
 
     return user_book_df
 end
@@ -132,7 +136,7 @@ function fit_model(epoch_parameters::DataFrameRow, training_data::DataFrame, new
         n_users = maximum(training_data[!, :user_id])
         n_books = maximum(training_data[!, :book_id])
         # Drop unobserved outcomes
-        training_data = @chain training_data @subset(:observed == true)
+        training_data = @chain training_data @subset(:observed | :pre_read)
             
 
         data = convert_dataframe_to_recommender(training_data, n_users, n_books)
@@ -158,13 +162,14 @@ function choose_observations(epoch_parameters::DataFrameRow, recommender, new_da
     # NOTE: as the new_data is already added to the simulation data during the model fit, no need to use `new_data` here
 
     # Each user gets to read an additional book!
-    for user_id in unique((@chain simulation_data @subset(!:observed) _[!, :user_id]))
-        user_prediction = recommend(recommender, user_id, 1, (@chain simulation_data @subset(!:observed & (:user_id == user_id)) @select(:book_id) unique _[!, :book_id]))
+    for user_id in unique((@chain simulation_data @subset(!(:observed | :pre_read)) _[!, :user_id]))
+        user_prediction = recommend(recommender, user_id, 1, (@chain simulation_data @subset(!(:observed | :pre_read) & (:user_id == user_id)) @select(:book_id) unique _[!, :book_id]))
         best_book = user_prediction[1][1]
         best_book_score = user_prediction[1][2]
-        # if best_book_score > 0 # If utility is positive, then flip to 'observed'
-        #     simulation_data[(simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book), :observed] = true
-        # end
+        if best_book_score > 0 # If utility is estimated to be positive, then flip to 'observed'
+            simulation_data[((simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book)), :observed] .= true
+            simulation_data[((simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book)), :predicted_utility] .= best_book_score
+        end
     end
 
     return simulation_data
@@ -186,9 +191,19 @@ recommender = model_objects[36]
 ```
 
 ## Assess outcome quality
-
-TODO: factor out the 'free books'
+ 
+  
+```julia
+utility_rollup = @chain simulation_data begin
+    @groupby(:user_id)
+    @combine(:user_utility_achieved = sum(:user_book_utility[:observed]), # may be negative if pos-predicted utility turns out to be negative
+             :user_utility_predicted = sum(:predicted_utility[:observed]), # this should be strictly positive
+             :user_utility_possible = @c sum(filter(x -> x > 0, sort(:user_book_utility, rev=true)[1:n_months])) # user has the possibility of choosing X books = n_months
+             ) 
+    @transform(:pct_utility_achieved = :user_utility_achieved / :user_utility_possible)
+end
+```
 
 ```julia
-simulation_data
+
 ```
