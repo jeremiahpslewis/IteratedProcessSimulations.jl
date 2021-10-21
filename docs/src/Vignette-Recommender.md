@@ -40,13 +40,12 @@ The simulation runs over a course of 36 months.
 ```julia
 n_users = 100
 n_books_per_month = 10
-n_months = 36
+n_months = 24
 pct_pre_read = 0.1  # X% of new books are 'pre-read' by users
 
 # Define data generating process for the users
 user_dgp = @model params begin
-        utility_weight_quality_raw ~ Normal(0, 5)
-        user_utility_weight_quality = logistic(utility_weight_quality_raw)
+        user_utility_weight_quality ~ Distributions.TruncatedNormal(0.5, 0.1, 0, 1)
         user_utility_weight_topicality = 1 - user_utility_weight_quality
 end
 
@@ -57,8 +56,8 @@ user_sim_description = DataFrame(
 ```
 
 ## Create user sample
-```julia
 
+```julia
 user_attributes = @chain generate_data(user_dgp, user_sim_description) begin
     @transform(:user_id = @c 1:length(:id))
     @select(:user_id, :user_utility_weight_quality, :user_utility_weight_topicality)
@@ -69,8 +68,8 @@ end
 
 ```julia
 book_dgp = @model params begin
-        quality ~ Normal(0, 5)
-        topicality ~ Normal(0, 5)
+        quality ~ Distributions.TruncatedNormal(10, 3, 0, 100)
+        topicality ~ Distributions.TruncatedNormal(10, 3, 0, 100)
 end
 
 book_sim_description = DataFrame(
@@ -151,7 +150,7 @@ fit_model(eachrow(book_sim_description)[1], training_data, new_data)
 ```
 
 ```julia
-# Skip using this for now, but could be useful in a real study...
+# Skip using this to track parameter / model outcomes for now, but could be useful in a real study...
 function summarize_model(epoch_parameters::DataFrameRow, model, simulation_data::DataFrame, new_data::DataFrame)
     DataFrame(:epoch => [epoch_parameters.epoch])
 end
@@ -167,10 +166,8 @@ function choose_observations(epoch_parameters::DataFrameRow, recommender, new_da
         user_prediction = recommend(recommender, user_id, 1, (@chain simulation_data @subset(!(:observed | :pre_read) & (:user_id == user_id)) @select(:book_id) unique _[!, :book_id]))
         best_book = user_prediction[1][1]
         best_book_score = user_prediction[1][2]
-        if best_book_score > 0 # If utility is estimated to be positive, then flip to 'observed'
-            simulation_data[((simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book)), :observed] .= true
-            simulation_data[((simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book)), :predicted_utility] .= best_book_score
-        end
+        simulation_data[((simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book)), :observed] .= true
+        simulation_data[((simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book)), :predicted_utility] .= best_book_score
     end
 
     return simulation_data
@@ -228,16 +225,23 @@ utility_rollup |> @vlplot(width=500, height=300, :bar, x={:pct_utility_achieved,
 ## Plot User Preferences
 
 ```julia
-utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.01}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"count()", title="User Count"}, title="Percentage of Possible Utility Achieved per User")
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.05}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"count()", title="User Count"}, title="User Preferences, Percentage Weight Quality (vs Topicality)")
+```
+
+
+## Plot Individual Preferences Against Total Utility Possible
+
+```julia
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.01}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(user_utility_possible)", title="Possible Utility"}, title="Possible Utility by User Preferences")
 ```
 
 ## Plot Individual Preferences Against Utility
 
 ```julia
-utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.05}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(pct_utility_achieved)", title="Average Percent Utility Achieved", axis={format="%"}}, title="Percentage of Possible Utility Achieved by User Preferences")
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.01}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(pct_utility_achieved)", title="Average Percent Utility Achieved", axis={format="%"}}, title="Percentage of Possible Utility Achieved by User Preferences")
 ```
 
 
 ```julia
-utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.1}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(user_utility_achieved)", title="Average Utility Achieved"}, title="Average Utility Achieved by User Preferences")
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.01}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(user_utility_achieved)", title="Average Utility Achieved"}, title="Average Utility Achieved by User Preferences")
 ```
