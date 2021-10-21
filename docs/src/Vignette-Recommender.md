@@ -31,7 +31,8 @@ its user-specific utility becomes visible to the bookstore (i.e. a rating).
 
 To gather feedback on newly released books, the bookstore distributes
 copies to 10% of users in the release month, in exchange for their rating
-which becomes available instantly.
+which becomes available instantly. These books, for sake of simplicity
+can be repurchased (consumed) by the user.
 
 The simulation runs over a course of 36 months.
 
@@ -39,8 +40,8 @@ The simulation runs over a course of 36 months.
 
 ```@example 1
 n_users = 100
-n_books_per_month = 10
-n_months = 24
+n_books_per_month = 15
+n_months = 36
 pct_pre_read = 0.1  # X% of new books are 'pre-read' by users
 
 # Define data generating process for the users
@@ -168,8 +169,8 @@ function choose_observations(epoch_parameters::DataFrameRow, recommender, new_da
     # NOTE: as the new_data is already added to the simulation data during the model fit, no need to use `new_data` here
 
     # Each user gets to read an additional book!
-    for user_id in unique((@chain simulation_data @subset(!(:observed | :pre_read)) _[!, :user_id]))
-        user_prediction = recommend(recommender, user_id, 1, (@chain simulation_data @subset(!(:observed | :pre_read) & (:user_id == user_id)) @select(:book_id) unique _[!, :book_id]))
+    for user_id in unique((@chain simulation_data @subset(!:observed) _[!, :user_id]))
+        user_prediction = recommend(recommender, user_id, 1, (@chain simulation_data @subset(!:observed & (:user_id == user_id)) @select(:book_id) unique _[!, :book_id]))
         best_book = user_prediction[1][1]
         best_book_score = user_prediction[1][2]
         simulation_data[((simulation_data[!, :user_id] .== user_id) .& (simulation_data[!, :book_id] .== best_book)), :observed] .= true
@@ -200,10 +201,11 @@ recommender = model_objects[36]
 ```@example 1
 utility_rollup = @chain simulation_data begin
     @groupby(:user_id, :user_utility_weight_quality, :user_utility_weight_topicality)
-    @combine(:user_utility_achieved = sum(:user_book_utility[:observed]), # may be negative if pos-predicted utility turns out to be negative
+    @combine(:user_utility_achieved = sum(:user_book_utility[:observed]),
              :user_utility_predicted = sum(:predicted_utility[:observed]), # this should be strictly positive
-             :user_utility_possible = @c sum(filter(x -> x > 0, sort(:user_book_utility, rev=true)[1:n_months])) # user has the possibility of choosing X books = n_months
-             ) 
+             :n_books_purchased = length(:predicted_utility[:observed])
+             :user_utility_possible = @c sum(sort(:user_book_utility, rev=true)[1:n_months]) # user has the possibility of choosing X books = n_months
+             )
     @transform(:pct_utility_achieved = :user_utility_achieved / :user_utility_possible)
 end
 
