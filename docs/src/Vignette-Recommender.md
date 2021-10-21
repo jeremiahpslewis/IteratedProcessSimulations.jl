@@ -93,7 +93,7 @@ function transform_data(book_df)
 
     user_book_df = @chain user_book_df begin
         @transform(
-            :user_book_utility = :topicality * :user_utility_weight_quality + :quality * :user_utility_weight_topicality,
+            :user_book_utility = :topicality * :user_utility_weight_topicality + :quality * :user_utility_weight_quality,
             # X% of new books are 'pre-read' by users
             :pre_read = rand(Bernoulli(pct_pre_read))
                    )
@@ -195,7 +195,7 @@ recommender = model_objects[36]
   
 ```julia
 utility_rollup = @chain simulation_data begin
-    @groupby(:user_id)
+    @groupby(:user_id, :user_utility_weight_quality, :user_utility_weight_topicality)
     @combine(:user_utility_achieved = sum(:user_book_utility[:observed]), # may be negative if pos-predicted utility turns out to be negative
              :user_utility_predicted = sum(:predicted_utility[:observed]), # this should be strictly positive
              :user_utility_possible = @c sum(filter(x -> x > 0, sort(:user_book_utility, rev=true)[1:n_months])) # user has the possibility of choosing X books = n_months
@@ -204,6 +204,39 @@ utility_rollup = @chain simulation_data begin
 end
 ```
 
-```julia
 
+## Plot Utility Distribution across Users
+
+```julia
+utility_rollup |> @vlplot(:bar, width=500, height=300, x={:user_utility_achieved, bin={step=0.5}, title="Total Utility Achieved"}, y={"count()", title="User Count"}, title="Utility Achieved per User")
+```
+
+## Plot Predicted Utility vs Actual Utility
+
+```julia
+utility_rollup |> @vlplot(:point, width=500, height=500, x={:user_utility_achieved, title="Total Utility Achieved"}, y={:user_utility_possible, title="Total Utility Possible"}, title="Model Relatively Ineffective")
+```
+
+## Plot Percent Utility Achieved across Users
+
+```julia
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:pct_utility_achieved, bin={step=0.005}, title="Percent Utility Achieved", axis={format="%"}}, y={"count()", title="User Count"}, title="Percentage of Possible Utility Achieved per User")
+```
+
+
+## Plot User Preferences
+
+```julia
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.01}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"count()", title="User Count"}, title="Percentage of Possible Utility Achieved per User")
+```
+
+## Plot Individual Preferences Against Utility
+
+```julia
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.1}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(pct_utility_achieved)", title="User Count", axis={format="%"}}, title="Percentage of Possible Utility Achieved per User")
+```
+
+
+```julia
+utility_rollup |> @vlplot(width=500, height=300, :bar, x={:user_utility_weight_quality, bin={step=0.1}, title="User Preference for Quality (over Topicality)", axis={format="%"}}, y={"mean(user_utility_achieved)", title="User Count"}, title="Percentage of Possible Utility Achieved per User")
 ```
