@@ -38,7 +38,7 @@ struct IteratedProcessSimulation
 end
 
 # Write your package code here.
-"""Check whether simulation_description dataframe is properly specified with n_datapoints column for i.i.d. sampling from data generating process"""
+"""Check whether `simulation_description` dataframe is properly specified with n_datapoints column for i.i.d. sampling from data generating process"""
 function validate_simulation_description(simulation_description::DataFrame)
     isa(simulation_description.n_datapoints, Vector{Int}) || throw(ArgumentError("simulation_description must contain a :n_datapoints column of type Int"))
 	isa(simulation_description.epoch, Vector{Int}) || throw(ArgumentError("simulation_description must contain an :epoch column of type Int"))
@@ -56,7 +56,7 @@ function validate_choose_observations(choose_observations::Function) end
 """
 	validate_inputs(ips::IteratedProcessSimulation)
 
-Validate IteratedProcessSimulation object.
+Validate `IteratedProcessSimulation` object.
 """
 function validate_inputs(ips::IteratedProcessSimulation)
     validate_simulation_description(ips.simulation_description)
@@ -68,7 +68,7 @@ end
 """
 	generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrameRow)
 
-Generate data from a data_generating_process for a single epoch.
+Generate data from a `data_generating_process` for a single epoch.
 
 """
 function generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrameRow)
@@ -90,7 +90,7 @@ end
 """
 	generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrame)
 
-Generate data from a data_generating_process for a series of epochs.
+Generate data from a `data_generating_process` for a series of epochs.
 
 """
 function generate_data(data_generating_process::Soss.Model, epoch_parameters::DataFrame)

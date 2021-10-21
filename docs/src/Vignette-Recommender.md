@@ -126,11 +126,11 @@ function convert_dataframe_to_recommender(df::DataFrame, n_users, n_books)
 end
 
 function fit_model(epoch_parameters::DataFrameRow, training_data::DataFrame, new_data::DataFrame)
-        training_data = copy(training_data)
+        # Note, the statement below permanently adds the new data to the training dataset
         append!(training_data, new_data, promote=true)
 
         n_users = maximum(training_data[!, :user_id])
-        n_books =maximum(training_data[!, :book_id])
+        n_books = maximum(training_data[!, :book_id])
         # Drop unobserved outcomes
         training_data = @chain training_data @subset(:observed == true)
             
@@ -155,8 +155,7 @@ end
 
 ```julia
 function choose_observations(epoch_parameters::DataFrameRow, recommender, new_data::DataFrame, simulation_data::DataFrame)
-    # Select 'unobserved' datapoints to observe
-    append!(simulation_data, new_data, promote=true)
+    # NOTE: as the new_data is already added to the simulation data during the model fit, no need to use `new_data` here
 
     # Each user gets to read an additional book!
     for user_id in unique((@chain simulation_data @subset(!:observed) _[!, :user_id]))
@@ -184,4 +183,12 @@ simulation_data, model_summary, model_objects = run_simulation(ips)
 # TODO: for debugging, remove
 user_id = 1
 recommender = model_objects[36]
+```
+
+## Assess outcome quality
+
+TODO: factor out the 'free books'
+
+```julia
+simulation_data
 ```
