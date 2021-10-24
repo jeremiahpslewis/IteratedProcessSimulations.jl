@@ -1,7 +1,7 @@
 name = "IteratedProcessSimulations"
 uuid = "4cc8113b-92e1-44eb-9dd6-a1e250a7ca3b"
 authors = ["Jeremiah Lewis <4462211+jlewis91@users.noreply.github.com> and contributors"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
