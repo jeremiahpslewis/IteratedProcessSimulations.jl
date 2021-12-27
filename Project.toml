@@ -13,7 +13,7 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
 Chain = "0.4"
-DataFrameMacros = "0.1"
+DataFrameMacros = "0.1, 0.2"
 DataFrames = "1"
 MeasureTheory = "0.13"
 Soss = "0.20"
